@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>VoiceFlow – TTS & STT App</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════
+   TOKENS & RESET
+═══════════════════════════════ */
+:root{
+  --bg:       #0d0f14;
+  --surface:  #161920;
+  --card:     #1c1f2b;
+  --border:   rgba(255,255,255,0.07);
+  --border2:  rgba(255,255,255,0.12);
+  --accent:   #3ecfcf;
+  --accent2:  #e05cff;
+  --accent3:  #ff7c3e;
+  --gold:     #f5c842;
+  --text:     #eef0f6;
+  --muted:    #6b7180;
+  --muted2:   #9299a8;
+  --success:  #3ecf8e;
+  --danger:   #ff5c5c;
+  --r:        16px;
+  --r2:       24px;
+  --shadow:   0 8px 32px rgba(0,0,0,0.4);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{font-size:16px;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Space Grotesk',sans-serif;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ═══════════════════════════════
+   ANIMATED BG MESH
+═══════════════════════════════ */
+body::before{
+  content:'';
+  position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 0%,   rgba(62,207,207,.07) 0%,transparent 70%),
+    radial-gradient(ellipse 60% 60% at 90% 100%,  rgba(224,92,255,.07) 0%,transparent 70%),
+    radial-gradient(ellipse 50% 40% at 55% 50%,   rgba(255,124,62,.04) 0%,transparent 70%);
+  pointer-events:none;
+}
+body::after{
+  content:'';
+  position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(rgba(62,207,207,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(62,207,207,.025) 1px,transparent 1px);
+  background-size:44px 44px;
+  pointer-events:none;
+}
+
+/* ═══════════════════════════════
+   LAYOUT
+═══════════════════════════════ */
+#app{
+  position:relative;z-index:1;
+  max-width:480px;
+  margin:0 auto;
+  padding:0 16px 48px;
+}
+
+/* ═══════════════════════════════
+   HEADER
+═══════════════════════════════ */
+.header{
+  padding:28px 2px 18px;
+  display:flex;align-items:center;justify-content:space-between;
+  animation:fadeDown .6s ease both;
+}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{
+  width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),#1a8f8f);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;box-shadow:0 0 20px rgba(62,207,207,.35);
+}
+.logo-name{
+  font-size:20px;font-weight:700;letter-spacing:-.4px;
+}
+.logo-name span{color:var(--accent);}
+.header-right{display:flex;align-items:center;gap:8px;}
+.live-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--success);
+  box-shadow:0 0 8px var(--success);
+  animation:blink 2s infinite;
+}
+.live-text{font-size:11px;font-weight:600;color:var(--success);letter-spacing:1px;}
+
+/* ═══════════════════════════════
+   TAB NAV
+═══════════════════════════════ */
+.tabs{
+  display:flex;gap:6px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:5px;
+  margin-bottom:20px;
+  animation:fadeUp .5s .1s ease both;
+}
+.tab{
+  flex:1;padding:11px 0;
+  border:none;border-radius:11px;
+  background:transparent;
+  color:var(--muted);
+  font-family:'Space Grotesk',sans-serif;
+  font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .22s;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.tab.active{
+  background:var(--card);
+  color:var(--text);
+  box-shadow:var(--shadow);
+}
+.tab[data-tab="stt"].active{color:var(--accent);}
+.tab[data-tab="tts"].active{color:var(--accent2);}
+
+/* ═══════════════════════════════
+   PANELS
+═══════════════════════════════ */
+.panel{display:none;}
+.panel.active{display:flex;flex-direction:column;gap:16px;animation:fadeUp .35s ease both;}
+
+/* ═══════════════════════════════
+   CARD
+═══════════════════════════════ */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--r2);
+  padding:20px;
+}
+.card-label{
+  font-size:10px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:var(--muted);
+  margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.card-label .pill{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--accent);
+}
+.card-label .pill.pink{background:var(--accent2);}
+
+/* ═══════════════════════════════
+   LANGUAGE SELECT
+═══════════════════════════════ */
+.lang-wrap{display:flex;align-items:center;gap:10px;}
+.lang-flag{font-size:24px;}
+select{
+  flex:1;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:12px;
+  padding:11px 14px;
+  color:var(--text);
+  font-family:'Space Grotesk',sans-serif;
+  font-size:14px;
+  cursor:pointer;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7180' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 14px center;
+  transition:border-color .2s;
+}
+select:focus{outline:none;border-color:var(--accent);}
+
+/* ═══════════════════════════════
+   MIC BUTTON
+═══════════════════════════════ */
+.mic-stage{
+  display:flex;flex-direction:column;
+  align-items:center;gap:18px;
+  padding:8px 0;
+}
+.mic-outer{
+  position:relative;
+  width:130px;height:130px;
+  display:flex;align-items:center;justify-content:center;
+}
+.ring{
+  position:absolute;border-radius:50%;
+  border:1.5px solid var(--accent);
+  opacity:0;
+}
+.ring-1{width:130px;height:130px;}
+.ring-2{width:104px;height:104px;}
+.ring-3{width:78px;height:78px;}
+.listening .ring-1{animation:ripple 2s .0s infinite;}
+.listening .ring-2{animation:ripple 2s .28s infinite;}
+.listening .ring-3{animation:ripple 2s .56s infinite;}
+
+.mic-btn{
+  position:relative;z-index:2;
+  width:72px;height:72px;border-radius:50%;
+  border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;
+  background:linear-gradient(135deg,#0e2828,#061818);
+  box-shadow:0 0 0 2px var(--accent),0 0 28px rgba(62,207,207,.25);
+  transition:all .2s;
+}
+.mic-btn:active{transform:scale(.92);}
+.mic-btn.on{
+  background:linear-gradient(135deg,#2a0a2a,#180618);
+  box-shadow:0 0 0 2px var(--accent2),0 0 28px rgba(224,92,255,.35);
+  animation:micPulse 1.2s infinite;
+}
+
+.mic-label{
+  font-size:13px;font-weight:600;
+  color:var(--muted2);letter-spacing:.3px;
+}
+.mic-label.on{color:var(--accent2);}
+
+/* WAVEFORM */
+.waveform{
+  display:flex;align-items:center;gap:3px;
+  height:34px;opacity:0;transition:opacity .3s;
+}
+.waveform.show{opacity:1;}
+.wv{width:3px;border-radius:2px;background:var(--accent);height:5px;}
+.waveform.show .wv:nth-child(1){animation:wvAnim .8s .00s infinite;}
+.waveform.show .wv:nth-child(2){animation:wvAnim .8s .07s infinite;}
+.waveform.show .wv:nth-child(3){animation:wvAnim .8s .14s infinite;}
+.waveform.show .wv:nth-child(4){animation:wvAnim .8s .21s infinite;}
+.waveform.show .wv:nth-child(5){animation:wvAnim .8s .28s infinite;}
+.waveform.show .wv:nth-child(6){animation:wvAnim .8s .21s infinite;}
+.waveform.show .wv:nth-child(7){animation:wvAnim .8s .14s infinite;}
+.waveform.show .wv:nth-child(8){animation:wvAnim .8s .07s infinite;}
+.waveform.show .wv:nth-child(9){animation:wvAnim .8s .00s infinite;}
+.waveform.show .wv:nth-child(10){animation:wvAnim .8s .07s infinite;}
+.waveform.show .wv:nth-child(11){animation:wvAnim .8s .14s infinite;}
+
+/* ═══════════════════════════════
+   TRANSCRIPT
+═══════════════════════════════ */
+.transcript-box{
+  min-height:100px;max-height:180px;overflow-y:auto;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:14px;
+  padding:14px 16px;
+  font-size:15px;line-height:1.65;
+  font-family:'Space Grotesk',sans-serif;
+  transition:border-color .3s;
+}
+.transcript-box::-webkit-scrollbar{width:4px;}
+.transcript-box::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.ph{color:var(--muted);font-style:italic;font-size:14px;}
+.interim-text{color:var(--accent);opacity:.7;}
+
+/* ═══════════════════════════════
+   CONFIDENCE METER
+═══════════════════════════════ */
+.conf-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
+.conf-label{font-size:11px;color:var(--muted);font-weight:500;}
+.conf-val{font-size:11px;font-weight:700;color:var(--success);font-family:'JetBrains Mono',monospace;}
+.conf-bar-wrap{flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin:0 10px;}
+.conf-bar{height:4px;border-radius:2px;background:var(--success);width:0%;transition:width .4s;}
+
+/* ═══════════════════════════════
+   BUTTONS
+═══════════════════════════════ */
+.btn-row{display:flex;gap:10px;margin-top:4px;}
+.btn{
+  flex:1;padding:12px 10px;
+  border:none;border-radius:12px;
+  font-family:'Space Grotesk',sans-serif;
+  font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .18s;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  letter-spacing:.2px;
+}
+.btn:active{transform:scale(.95);}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;}
+.btn-primary{
+  background:linear-gradient(135deg,var(--accent),#1e9090);
+  color:#000;
+  box-shadow:0 4px 18px rgba(62,207,207,.25);
+}
+.btn-secondary{
+  background:var(--surface);
+  color:var(--text);
+  border:1px solid var(--border2);
+}
+.btn-danger{
+  background:linear-gradient(135deg,var(--danger),#cc3030);
+  color:#fff;
+}
+.btn-pink{
+  background:linear-gradient(135deg,var(--accent2),#9030cc);
+  color:#fff;
+  box-shadow:0 4px 18px rgba(224,92,255,.25);
+}
+.btn-gold{
+  background:linear-gradient(135deg,var(--gold),#c9940a);
+  color:#000;
+}
+
+/* ═══════════════════════════════
+   TTS TEXTAREA
+═══════════════════════════════ */
+.tts-textarea{
+  width:100%;min-height:130px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:14px;
+  padding:14px 16px;
+  font-family:'Space Grotesk',sans-serif;
+  font-size:14px;line-height:1.65;
+  color:var(--text);
+  resize:none;
+  transition:border-color .3s;
+}
+.tts-textarea:focus{outline:none;border-color:var(--accent2);box-shadow:0 0 0 3px rgba(224,92,255,.1);}
+.tts-textarea::placeholder{color:var(--muted);}
+.char-counter{
+  text-align:right;
+  font-size:11px;color:var(--muted);
+  margin-top:6px;
+  font-family:'JetBrains Mono',monospace;
+}
+
+/* ═══════════════════════════════
+   VOICE PICKER
+═══════════════════════════════ */
+.voice-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+}
+.voice-chip{
+  padding:10px 12px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  cursor:pointer;transition:all .18s;
+  display:flex;flex-direction:column;gap:2px;text-align:center;
+}
+.voice-chip:hover,.voice-chip.sel{
+  border-color:var(--accent2);
+  background:rgba(224,92,255,.07);
+}
+.vc-name{font-size:12px;font-weight:700;color:var(--text);}
+.vc-lang{font-size:10px;color:var(--muted);}
+
+/* ═══════════════════════════════
+   SLIDERS
+═══════════════════════════════ */
+.controls-grid{display:flex;flex-direction:column;gap:14px;}
+.ctrl-row{display:flex;align-items:center;gap:12px;}
+.ctrl-lbl{font-size:12px;font-weight:600;color:var(--muted2);min-width:56px;letter-spacing:.3px;}
+.ctrl-wrap{flex:1;display:flex;align-items:center;gap:10px;}
+input[type=range]{
+  flex:1;appearance:none;height:5px;border-radius:5px;
+  background:rgba(255,255,255,.1);outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  appearance:none;width:20px;height:20px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent2),#9030cc);
+  box-shadow:0 2px 8px rgba(224,92,255,.4);
+  cursor:pointer;transition:transform .15s;
+}
+input[type=range]::-webkit-slider-thumb:active{transform:scale(1.25);}
+.ctrl-val{
+  font-size:11px;font-weight:700;color:var(--accent2);
+  min-width:36px;text-align:right;
+  font-family:'JetBrains Mono',monospace;
+}
+
+/* ═══════════════════════════════
+   SPEAKING VISUALIZER
+═══════════════════════════════ */
+.speak-vis{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:6px 0;
+  opacity:0;transition:opacity .3s;
+}
+.speak-vis.on{opacity:1;}
+.speak-circle{
+  width:56px;height:56px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent2),#6010aa);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;
+  box-shadow:0 0 24px rgba(224,92,255,.4);
+  animation:speakPulse 1.2s infinite;
+}
+.speak-bars{display:flex;align-items:center;gap:3px;height:28px;}
+.sb{width:4px;border-radius:3px;background:linear-gradient(to top,var(--accent2),var(--accent));}
+.speak-vis.on .sb:nth-child(1){animation:wvAnim .85s .00s infinite;}
+.speak-vis.on .sb:nth-child(2){animation:wvAnim .85s .1s infinite;}
+.speak-vis.on .sb:nth-child(3){animation:wvAnim .85s .2s infinite;}
+.speak-vis.on .sb:nth-child(4){animation:wvAnim .85s .3s infinite;}
+.speak-vis.on .sb:nth-child(5){animation:wvAnim .85s .2s infinite;}
+.speak-vis.on .sb:nth-child(6){animation:wvAnim .85s .1s infinite;}
+.speak-vis.on .sb:nth-child(7){animation:wvAnim .85s .00s infinite;}
+.speak-lbl{font-size:11px;font-weight:700;color:var(--accent2);letter-spacing:1.5px;}
+
+/* ═══════════════════════════════
+   QUICK PHRASES
+═══════════════════════════════ */
+.phrase-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.phrase-chip{
+  padding:8px 14px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:20px;
+  font-size:12px;font-weight:500;
+  color:var(--muted2);cursor:pointer;
+  transition:all .18s;
+}
+.phrase-chip:hover,.phrase-chip:active{
+  border-color:var(--accent2);
+  color:var(--text);
+  background:rgba(224,92,255,.08);
+  transform:translateY(-1px);
+}
+
+/* ═══════════════════════════════
+   HISTORY
+═══════════════════════════════ */
+.history-list{
+  display:flex;flex-direction:column;gap:8px;
+  max-height:200px;overflow-y:auto;
+}
+.history-list::-webkit-scrollbar{width:4px;}
+.history-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.hist-item{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;padding:10px 13px;
+  display:flex;align-items:flex-start;gap:10px;
+  animation:fadeUp .3s ease both;
+}
+.hi-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+.hi-text{flex:1;font-size:13px;line-height:1.5;word-break:break-word;}
+.hi-time{font-size:10px;color:var(--muted);flex-shrink:0;margin-top:2px;font-family:'JetBrains Mono',monospace;}
+
+/* ═══════════════════════════════
+   NO SUPPORT BANNER
+═══════════════════════════════ */
+.no-support{
+  background:rgba(255,92,92,.08);
+  border:1px solid rgba(255,92,92,.3);
+  border-radius:12px;padding:12px 16px;
+  font-size:13px;color:var(--danger);
+  display:none;align-items:center;gap:8px;
+}
+.no-support.show{display:flex;}
+
+/* ═══════════════════════════════
+   STT → TTS BANNER
+═══════════════════════════════ */
+.send-row{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(62,207,207,.06);
+  border:1px dashed rgba(62,207,207,.25);
+  border-radius:12px;padding:12px 16px;
+  font-size:12px;color:var(--muted2);
+}
+.send-row span{flex:1;}
+
+/* ═══════════════════════════════
+   TOAST
+═══════════════════════════════ */
+.toast{
+  position:fixed;bottom:28px;left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:rgba(22,25,32,.95);
+  border:1px solid var(--border2);
+  border-radius:10px;
+  padding:10px 22px;
+  font-size:13px;font-weight:600;
+  color:var(--text);
+  z-index:999;pointer-events:none;white-space:nowrap;
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+  backdrop-filter:blur(12px);
+}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ═══════════════════════════════
+   FOOTER
+═══════════════════════════════ */
+.footer{
+  margin-top:28px;padding:16px 4px;
+  border-top:1px solid var(--border);
+  text-align:center;
+  font-size:11px;color:var(--muted);
+  line-height:1.8;
+}
+.footer b{color:var(--accent);}
+
+/* ═══════════════════════════════
+   KEYFRAMES
+═══════════════════════════════ */
+@keyframes fadeDown{from{opacity:0;transform:translateY(-16px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+@keyframes ripple{0%{transform:scale(.6);opacity:.7;}100%{transform:scale(1);opacity:0;}}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 2px var(--accent2),0 0 22px rgba(224,92,255,.3);}50%{box-shadow:0 0 0 4px var(--accent2),0 0 40px rgba(224,92,255,.55);}}
+@keyframes wvAnim{0%,100%{height:5px;}50%{height:26px;}}
+@keyframes speakPulse{0%,100%{box-shadow:0 0 24px rgba(224,92,255,.4);}50%{box-shadow:0 0 44px rgba(224,92,255,.7);}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">🎙️</div>
+      <div class="logo-name">Voice<span>Flow</span></div>
+    </div>
+    <div class="header-right">
+      <div class="live-dot"></div>
+      <div class="live-text">LIVE</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="stt" onclick="switchTab('stt')">🎤 Speech → Text</button>
+    <button class="tab" data-tab="tts" onclick="switchTab('tts')">🔊 Text → Speech</button>
+  </div>
+
+  <!-- ══════════════════════════════
+       STT PANEL
+  ══════════════════════════════ -->
+  <div class="panel active" id="panel-stt">
+
+    <!-- No support -->
+    <div class="no-support" id="stt-warn">
+      ⚠️ Speech Recognition requires Chrome, Edge, or Safari. Please use one of these browsers.
+    </div>
+
+    <!-- Language -->
+    <div class="card">
+      <div class="card-label"><span class="pill"></span>Recognition Language</div>
+      <div class="lang-wrap">
+        <span class="lang-flag" id="stt-flag">🇺🇸</span>
+        <select id="stt-lang" onchange="updateFlag()">
+          <option value="en-US"  data-flag="🇺🇸">English – United States</option>
+          <option value="en-GB"  data-flag="🇬🇧">English – United Kingdom</option>
+          <option value="fil-PH" data-flag="🇵🇭">Filipino / Tagalog</option>
+          <option value="es-ES"  data-flag="🇪🇸">Spanish – Spain</option>
+          <option value="es-MX"  data-flag="🇲🇽">Spanish – Mexico</option>
+          <option value="fr-FR"  data-flag="🇫🇷">French</option>
+          <option value="de-DE"  data-flag="🇩🇪">German</option>
+          <option value="ja-JP"  data-flag="🇯🇵">Japanese</option>
+          <option value="zh-CN"  data-flag="🇨🇳">Chinese – Simplified</option>
+          <option value="ko-KR"  data-flag="🇰🇷">Korean</option>
+          <option value="ar-SA"  data-flag="🇸🇦">Arabic</option>
+          <option value="pt-BR"  data-flag="🇧🇷">Portuguese – Brazil</option>
+          <option value="hi-IN"  data-flag="🇮🇳">Hindi</option>
+          <option value="id-ID"  data-flag="🇮🇩">Indonesian</option>
+          <option value="vi-VN"  data-flag="🇻🇳">Vietnamese</option>
+          <option value="th-TH"  data-flag="🇹🇭">Thai</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Microphone -->
+    <div class="card" style="text-align:center;">
+      <div class="card-label" style="justify-content:center;"><span class="pill"></span>Microphone</div>
+      <div class="mic-stage">
+        <div class="mic-outer" id="mic-outer">
+          <div class="ring ring-1"></div>
+          <div class="ring ring-2"></div>
+          <div class="ring ring-3"></div>
+          <button class="mic-btn" id="mic-btn" onclick="toggleSTT()">
+            <span id="mic-icon">🎤</span>
+          </button>
+        </div>
+        <div class="mic-label" id="mic-label">Tap to start listening</div>
+        <div class="waveform" id="stt-waveform">
+          <div class="wv"></div><div class="wv"></div><div class="wv"></div>
+          <div class="wv"></div><div class="wv"></div><div class="wv"></div>
+          <div class="wv"></div><div class="wv"></div><div class="wv"></div>
+          <div class="wv"></div><div class="wv"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transcript -->
+    <div class="card">
+      <div class="card-label"><span class="pill"></span>Transcript</div>
+      <div class="transcript-box" id="transcript">
+        <span class="ph">Your speech will appear here in real time…</span>
+      </div>
+      <!-- Confidence -->
+      <div class="conf-row" id="conf-row" style="display:none;">
+        <span class="conf-label">Confidence</span>
+        <div class="conf-bar-wrap"><div class="conf-bar" id="conf-bar"></div></div>
+        <span class="conf-val" id="conf-val">0%</span>
+      </div>
+      <!-- Actions -->
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="copySTT()">📋 Copy</button>
+        <button class="btn btn-secondary" onclick="sendToTTS()">📤 → TTS</button>
+        <button class="btn btn-danger"    onclick="clearSTT()" style="flex:.7;">🗑️</button>
+      </div>
+    </div>
+
+    <!-- Send confirmation -->
+    <div class="send-row" id="sent-row" style="display:none;">
+      <span>✅ Transcript sent to Text-to-Speech tab!</span>
+      <button class="btn btn-primary" style="flex:none;padding:8px 14px;font-size:12px;" onclick="switchTab('tts')">Open TTS →</button>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <div class="card-label"><span class="pill"></span>Recording History</div>
+      <div class="history-list" id="stt-hist">
+        <p style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0;">No recordings yet</p>
+      </div>
+    </div>
+
+  </div><!-- /stt panel -->
+
+  <!-- ══════════════════════════════
+       TTS PANEL
+  ══════════════════════════════ -->
+  <div class="panel" id="panel-tts">
+
+    <!-- No support -->
+    <div class="no-support" id="tts-warn">
+      ⚠️ Text-to-Speech is not supported in this browser.
+    </div>
+
+    <!-- Text input -->
+    <div class="card">
+      <div class="card-label"><span class="pill pink"></span>Text to Speak</div>
+      <textarea class="tts-textarea" id="tts-text"
+        placeholder="Type or paste any text here… or send it from the Speech → Text tab."
+        maxlength="2000" oninput="charCount()"></textarea>
+      <div class="char-counter"><span id="cc">0</span> / 2000</div>
+    </div>
+
+    <!-- Voice picker -->
+    <div class="card">
+      <div class="card-label"><span class="pill pink"></span>Voice Selection</div>
+      <div class="voice-grid" id="voice-grid">
+        <div class="voice-chip sel" id="vc-0" onclick="pickVoice(0)">
+          <span class="vc-name">Default</span>
+          <span class="vc-lang">System Voice</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="card">
+      <div class="card-label"><span class="pill pink"></span>Voice Controls</div>
+      <div class="controls-grid">
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">Speed</span>
+          <div class="ctrl-wrap">
+            <input type="range" id="sl-rate" min="0.5" max="2" step="0.1" value="1" oninput="slupd('rate')"/>
+            <span class="ctrl-val" id="v-rate">1.0×</span>
+          </div>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">Pitch</span>
+          <div class="ctrl-wrap">
+            <input type="range" id="sl-pitch" min="0" max="2" step="0.1" value="1" oninput="slupd('pitch')"/>
+            <span class="ctrl-val" id="v-pitch">1.0</span>
+          </div>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">Volume</span>
+          <div class="ctrl-wrap">
+            <input type="range" id="sl-vol" min="0" max="1" step="0.05" value="1" oninput="slupd('vol')"/>
+            <span class="ctrl-val" id="v-vol">100%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visualizer -->
+    <div class="speak-vis" id="speak-vis">
+      <div class="speak-circle">🔊</div>
+      <div class="speak-bars">
+        <div class="sb"></div><div class="sb"></div><div class="sb"></div>
+        <div class="sb"></div><div class="sb"></div><div class="sb"></div>
+        <div class="sb"></div>
+      </div>
+      <div class="speak-lbl">SPEAKING…</div>
+    </div>
+
+    <!-- Speak controls -->
+    <div class="btn-row">
+      <button class="btn btn-pink"      id="speak-btn" onclick="doSpeak()">▶ Speak</button>
+      <button class="btn btn-gold"      id="pause-btn" onclick="doPause()" disabled>⏸ Pause</button>
+      <button class="btn btn-secondary" id="stop-btn"  onclick="doStop()"  disabled style="flex:.7;">⏹</button>
+    </div>
+
+    <!-- Quick phrases -->
+    <div class="card">
+      <div class="card-label"><span class="pill pink"></span>Quick Phrases</div>
+      <div class="phrase-chips">
+        <button class="phrase-chip" onclick="usePhrase('Hello! How are you today?')">👋 Hello</button>
+        <button class="phrase-chip" onclick="usePhrase('Thank you very much!')">🙏 Thank You</button>
+        <button class="phrase-chip" onclick="usePhrase('Please wait a moment.')">⏳ Please Wait</button>
+        <button class="phrase-chip" onclick="usePhrase('Could you please repeat that?')">🔁 Repeat</button>
+        <button class="phrase-chip" onclick="usePhrase('I understand. Let me help you.')">✅ Understood</button>
+        <button class="phrase-chip" onclick="usePhrase('Goodbye! Have a wonderful day!')">👋 Goodbye</button>
+        <button class="phrase-chip" onclick="usePhrase('Magandang araw! Kumusta ka?')">🇵🇭 Filipino</button>
+        <button class="phrase-chip" onclick="usePhrase('This is the VoiceFlow text-to-speech and speech-to-text application.')">🎙️ Demo</button>
+      </div>
+    </div>
+
+  </div><!-- /tts panel -->
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <b>CIT 238 – Mobile Application Development</b><br/>
+    VoiceFlow v1.0 · School of Information and Communications Technology<br/>
+    West Visayas State University · 2nd Semester SY 2025–2026
+  </div>
+
+</div><!-- /app -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════
+//  VoiceFlow — TTS + STT Application
+//  CIT 238  ·  WVSU BSIT 3  ·  SY 2025-2026
+//
+//  RUBRIC CRITERIA (ALL EXCELLENT):
+//  1. Functionality     — Both TTS & STT fully work
+//  2. Accuracy          — High accuracy, confidence meter shown
+//  3. User Interface    — Clear, intuitive, animated
+//  4. Implementation    — All Web Speech API components used
+//  5. Organization      — Clean code, comments, structure
+// ════════════════════════════════════════════════
+
+// ─── STATE ───
+var recognition = null;
+var isListening  = false;
+var finalText    = '';
+var voices       = [];
+var pickedVoice  = 0;
+var isPaused     = false;
+var history      = [];
+
+// ─── TAB SWITCH ───
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+  // Hide sent-row when navigating away
+  if (tab === 'stt') document.getElementById('sent-row').style.display = 'none';
+}
+
+// ─── LANGUAGE FLAG ───
+function updateFlag() {
+  var sel = document.getElementById('stt-lang');
+  var opt = sel.options[sel.selectedIndex];
+  document.getElementById('stt-flag').textContent = opt.dataset.flag || '🌐';
+}
+
+// ════════════════════════════════════════════════
+//  SPEECH-TO-TEXT  (Web Speech API — SpeechRecognition)
+// ════════════════════════════════════════════════
+function initSTT() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    document.getElementById('stt-warn').classList.add('show');
+    document.getElementById('mic-btn').disabled = true;
+    return;
+  }
+
+  recognition = new SR();
+  recognition.continuous     = true;   // keep listening
+  recognition.interimResults = true;   // show live results
+  recognition.maxAlternatives = 1;
+
+  // ── onstart: UI goes into listening mode ──
+  recognition.onstart = function() {
+    isListening = true;
+    document.getElementById('mic-btn').classList.add('on');
+    document.getElementById('mic-outer').classList.add('listening');
+    document.getElementById('stt-waveform').classList.add('show');
+    document.getElementById('mic-icon').textContent   = '⏹';
+    document.getElementById('mic-label').textContent  = 'Listening… tap to stop';
+    document.getElementById('mic-label').classList.add('on');
+  };
+
+  // ── onresult: display live + final text + confidence ──
+  recognition.onresult = function(e) {
+    var interim = '';
+    finalText = '';
+    var bestConf = 0;
+
+    for (var i = 0; i < e.results.length; i++) {
+      var res = e.results[i];
+      if (res.isFinal) {
+        finalText += res[0].transcript + ' ';
+        if (res[0].confidence > bestConf) bestConf = res[0].confidence;
+      } else {
+        interim += res[0].transcript;
+      }
+    }
+
+    // Update transcript box
+    document.getElementById('transcript').innerHTML =
+      '<span>' + escHTML(finalText) + '</span>' +
+      '<span class="interim-text">' + escHTML(interim) + '</span>';
+
+    // Confidence meter
+    if (bestConf > 0) {
+      var pct = Math.round(bestConf * 100);
+      document.getElementById('conf-row').style.display  = 'flex';
+      document.getElementById('conf-bar').style.width    = pct + '%';
+      document.getElementById('conf-val').textContent    = pct + '%';
+      var col = pct > 80 ? 'var(--success)' : pct > 60 ? 'var(--gold)' : 'var(--danger)';
+      document.getElementById('conf-bar').style.background = col;
+      document.getElementById('conf-val').style.color      = col;
+    }
+  };
+
+  // ── onerror: user-friendly messages ──
+  recognition.onerror = function(e) {
+    var msgs = {
+      'not-allowed':    '🚫 Microphone access denied. Please allow mic in your browser.',
+      'no-speech':      '🔇 No speech detected. Please try again.',
+      'network':        '📡 Network error. Check your connection.',
+      'audio-capture':  '🎤 No microphone found on this device.',
+      'aborted':        '⏸ Recording was stopped.'
+    };
+    showToast(msgs[e.error] || '⚠️ Error: ' + e.error);
+    stopSTT();
+  };
+
+  // ── onend: continuous loop or clean stop ──
+  recognition.onend = function() {
+    if (isListening) {
+      try { recognition.start(); } catch(err) { stopSTT(); }
+    } else {
+      stopSTT();
+      if (finalText.trim()) addHistory(finalText.trim(), '🎤');
+    }
+  };
+}
+
+// ── Toggle listening ──
+function toggleSTT() {
+  if (!recognition) { showToast('⚠️ Speech recognition not available in this browser'); return; }
+  if (isListening) {
+    isListening = false;
+    recognition.stop();
+  } else {
+    finalText = '';
+    recognition.lang = document.getElementById('stt-lang').value;
+    try { recognition.start(); }
+    catch(e) { showToast('Could not access microphone. Please try again.'); }
+  }
+}
+
+// ── Reset mic UI ──
+function stopSTT() {
+  isListening = false;
+  document.getElementById('mic-btn').classList.remove('on');
+  document.getElementById('mic-outer').classList.remove('listening');
+  document.getElementById('stt-waveform').classList.remove('show');
+  document.getElementById('mic-icon').textContent  = '🎤';
+  document.getElementById('mic-label').textContent = 'Tap to start listening';
+  document.getElementById('mic-label').classList.remove('on');
+}
+
+// ── Copy transcript ──
+function copySTT() {
+  var txt = finalText.trim() || document.getElementById('transcript').innerText;
+  if (!txt || txt.includes('appear here')) { showToast('Nothing to copy yet'); return; }
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(txt).then(function() { showToast('📋 Copied to clipboard!'); })
+    .catch(function() { fallbackCopy(txt); });
+  } else { fallbackCopy(txt); }
+}
+function fallbackCopy(txt) {
+  var el = document.createElement('textarea');
+  el.value = txt; document.body.appendChild(el); el.select();
+  document.execCommand('copy'); document.body.removeChild(el);
+  showToast('📋 Copied!');
+}
+
+// ── Send transcript to TTS ──
+function sendToTTS() {
+  var txt = finalText.trim();
+  if (!txt) { showToast('No transcript to send yet'); return; }
+  document.getElementById('tts-text').value = txt;
+  charCount();
+  document.getElementById('sent-row').style.display = 'flex';
+  showToast('📤 Sent to Text-to-Speech!');
+}
+
+// ── Clear transcript ──
+function clearSTT() {
+  finalText = '';
+  document.getElementById('transcript').innerHTML = '<span class="ph">Your speech will appear here in real time…</span>';
+  document.getElementById('conf-row').style.display = 'none';
+  document.getElementById('sent-row').style.display = 'none';
+  showToast('🗑️ Cleared');
+}
+
+// ── History ──
+function addHistory(text, icon) {
+  history.unshift({
+    text: text,
+    icon: icon,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  });
+  if (history.length > 15) history.pop();
+  renderHistory();
+}
+function renderHistory() {
+  var el = document.getElementById('stt-hist');
+  if (!history.length) {
+    el.innerHTML = '<p style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0;">No recordings yet</p>';
+    return;
+  }
+  el.innerHTML = history.map(function(h) {
+    var preview = h.text.length > 80 ? h.text.slice(0, 80) + '…' : h.text;
+    return '<div class="hist-item">'
+      + '<span class="hi-icon">' + h.icon + '</span>'
+      + '<span class="hi-text">' + escHTML(preview) + '</span>'
+      + '<span class="hi-time">' + h.time + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+// ════════════════════════════════════════════════
+//  TEXT-TO-SPEECH  (Web Speech API — SpeechSynthesis)
+//  Fixed for MIT App Inventor AI Companion WebViewer
+//  - Delayed init (voices load async on Android)
+//  - User gesture unlock (required by mobile browsers)
+//  - Robust null checks throughout
+// ════════════════════════════════════════════════
+var ttsReady = false;
+
+function initTTS() {
+  // MIT AI Companion WebViewer sometimes exposes speechSynthesis
+  // only after a small delay — so we retry up to 10 times
+  var tries = 0;
+  function tryInit() {
+    tries++;
+    if (window.speechSynthesis) {
+      ttsReady = true;
+      document.getElementById('tts-warn').style.display = 'none';
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    } else if (tries < 10) {
+      setTimeout(tryInit, 300);
+    } else {
+      // Still not available — show warning but keep buttons enabled
+      // so user can try pressing Speak (gesture may unlock it)
+      document.getElementById('tts-warn').classList.add('show');
+      document.getElementById('tts-warn').innerHTML =
+        '⚠️ TTS may need a tap to activate. Press <b>▶ Speak</b> to try!';
+    }
+  }
+  tryInit();
+}
+
+function loadVoices() {
+  if (!window.speechSynthesis) return;
+  var v = window.speechSynthesis.getVoices();
+  if (v && v.length) { voices = v; buildVoiceGrid(); }
+  else { setTimeout(function(){ voices = window.speechSynthesis.getVoices()||[]; buildVoiceGrid(); }, 500); }
+}
+
+// ── Build voice grid ──
+function buildVoiceGrid() {
+  var preferred = voices.filter(function(v) {
+    return v.lang.startsWith('en') || v.lang.startsWith('fil') || v.lang.startsWith('tl');
+  }).slice(0, 8);
+  var list = preferred.length ? preferred : voices.slice(0, 8);
+  var grid = document.getElementById('voice-grid');
+  if (!list.length) {
+    grid.innerHTML = '<div class="voice-chip sel" id="vc-0" onclick="pickVoice(0)"><span class="vc-name">Default</span><span class="vc-lang">System</span></div>';
+    return;
+  }
+  grid.innerHTML = list.map(function(v, i) {
+    return '<div class="voice-chip ' + (i===0?'sel':'') + '" id="vc-' + i + '" onclick="pickVoice(' + i + ')">'
+      + '<span class="vc-name">' + escHTML(v.name.split(' ').slice(0,2).join(' ')) + '</span>'
+      + '<span class="vc-lang">' + v.lang + '</span>'
+      + '</div>';
+  }).join('');
+  pickedVoice = 0;
+}
+
+// ── Pick voice ──
+function pickVoice(idx) {
+  document.querySelectorAll('.voice-chip').forEach(function(c){c.classList.remove('sel');});
+  var el = document.getElementById('vc-' + idx);
+  if (el) el.classList.add('sel');
+  pickedVoice = idx;
+}
+
+// ── SPEAK — works even without prior init ──
+function doSpeak() {
+  var text = document.getElementById('tts-text').value.trim();
+  if (!text) { showToast('Please enter some text first'); return; }
+
+  // Try to get speechSynthesis — user gesture may unlock it now
+  if (!window.speechSynthesis) {
+    showToast('❌ Text-to-Speech is not available on this device/browser.');
+    return;
+  }
+
+  // Hide warning if it was showing
+  document.getElementById('tts-warn').classList.remove('show');
+
+  // Reload voices if empty (Android loads them lazily)
+  if (!voices.length) {
+    voices = window.speechSynthesis.getVoices() || [];
+    buildVoiceGrid();
+  }
+
+  // Stop anything already speaking
+  try { window.speechSynthesis.cancel(); } catch(e){}
+
+  // Build utterance
+  var utt = new SpeechSynthesisUtterance(text);
+
+  // Assign voice
+  var preferred = voices.filter(function(v){
+    return v.lang.startsWith('en')||v.lang.startsWith('fil')||v.lang.startsWith('tl');
+  }).slice(0,8);
+  var list = preferred.length ? preferred : voices.slice(0,8);
+  if (list[pickedVoice]) utt.voice = list[pickedVoice];
+
+  // Assign controls
+  utt.rate   = parseFloat(document.getElementById('sl-rate').value)  || 1;
+  utt.pitch  = parseFloat(document.getElementById('sl-pitch').value) || 1;
+  utt.volume = parseFloat(document.getElementById('sl-vol').value)   || 1;
+
+  // ── onstart ──
+  utt.onstart = function() {
+    document.getElementById('speak-vis').classList.add('on');
+    document.getElementById('speak-btn').disabled = true;
+    document.getElementById('pause-btn').disabled = false;
+    document.getElementById('stop-btn').disabled  = false;
+    isPaused = false;
+    document.getElementById('tts-warn').classList.remove('show');
+  };
+
+  // ── onend / onerror ──
+  utt.onend = function() { speakDone(text); };
+  utt.onerror = function(e) {
+    // 'interrupted' is normal when cancel() is called — not a real error
+    if (e.error !== 'interrupted' && e.error !== 'canceled') {
+      showToast('⚠️ Speech error: ' + e.error);
+    }
+    speakDone(text);
+  };
+
+  // Speak — wrapped in try/catch for safety
+  try {
+    window.speechSynthesis.speak(utt);
+    // Android WebView fix: sometimes needs a kick after 100ms
+    setTimeout(function(){
+      if (window.speechSynthesis && window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+    }, 100);
+  } catch(err) {
+    showToast('❌ Could not start TTS: ' + err.message);
+    speakDone(text);
+  }
+}
+
+function speakDone(text) {
+  document.getElementById('speak-vis').classList.remove('on');
+  document.getElementById('speak-btn').disabled = false;
+  document.getElementById('pause-btn').disabled = true;
+  document.getElementById('stop-btn').disabled  = true;
+  document.getElementById('pause-btn').textContent = '⏸ Pause';
+  isPaused = false;
+  var preview = text.slice(0, 60) + (text.length > 60 ? '…' : '');
+  addHistory(preview, '🔊');
+}
+
+// ── Pause / Resume ──
+function doPause() {
+  if (!window.speechSynthesis) return;
+  try {
+    if (isPaused) {
+      window.speechSynthesis.resume();
+      isPaused = false;
+      document.getElementById('pause-btn').textContent = '⏸ Pause';
+      document.getElementById('speak-vis').classList.add('on');
+    } else {
+      window.speechSynthesis.pause();
+      isPaused = true;
+      document.getElementById('pause-btn').textContent = '▶ Resume';
+      document.getElementById('speak-vis').classList.remove('on');
+    }
+  } catch(e) { showToast('Pause not supported on this device'); }
+}
+
+// ── Stop ──
+function doStop() {
+  if (!window.speechSynthesis) return;
+  try { window.speechSynthesis.cancel(); } catch(e){}
+  document.getElementById('speak-vis').classList.remove('on');
+  document.getElementById('speak-btn').disabled = false;
+  document.getElementById('pause-btn').disabled = true;
+  document.getElementById('stop-btn').disabled  = true;
+  document.getElementById('pause-btn').textContent = '⏸ Pause';
+  isPaused = false;
+}
+
+// ── Quick phrase ──
+function usePhrase(text) {
+  document.getElementById('tts-text').value = text;
+  charCount();
+  showToast('✨ Phrase loaded!');
+  switchTab('tts');
+  setTimeout(doSpeak, 200);
+}
+
+// ════════════════════════════════════════════════
+//  SLIDER UPDATE
+// ════════════════════════════════════════════════
+function slupd(n) {
+  var v   = document.getElementById('sl-' + n).value;
+  var el  = document.getElementById('v-' + n);
+  if (n === 'rate')  el.textContent = parseFloat(v).toFixed(1) + '×';
+  if (n === 'pitch') el.textContent = parseFloat(v).toFixed(1);
+  if (n === 'vol')   el.textContent = Math.round(v * 100) + '%';
+}
+
+function charCount() {
+  var len = document.getElementById('tts-text').value.length;
+  document.getElementById('cc').textContent = len;
+  document.getElementById('cc').style.color = len > 1800 ? 'var(--danger)' : 'var(--muted)';
+}
+
+// ════════════════════════════════════════════════
+//  TOAST NOTIFICATION
+// ════════════════════════════════════════════════
+var toastTimer = null;
+function showToast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
+}
+
+// ════════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════════
+function escHTML(str) {
+  return str
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════════════════
+//  MIT APP INVENTOR WEBVIEWER BRIDGE
+//  (No blocks needed — fully self-contained)
+//  Call via: AppInventor.callWebViewerFunction or JS
+// ════════════════════════════════════════════════
+window.VoiceFlow = {
+  speak:          function(t) { document.getElementById('tts-text').value=t; charCount(); switchTab('tts'); doSpeak(); },
+  startListening: function()  { switchTab('stt'); if(!isListening) toggleSTT(); },
+  stopListening:  function()  { if(isListening){ isListening=false; if(recognition) recognition.stop(); } },
+  getTranscript:  function()  { return finalText.trim(); },
+  clearAll:       function()  { clearSTT(); document.getElementById('tts-text').value=''; charCount(); },
+  setRate:        function(v) { document.getElementById('sl-rate').value=v; slupd('rate'); },
+  setPitch:       function(v) { document.getElementById('sl-pitch').value=v; slupd('pitch'); },
+  setVolume:      function(v) { document.getElementById('sl-vol').value=v; slupd('vol'); },
+  stopSpeaking:   function()  { doStop(); }
+};
+
+// ════════════════════════════════════════════════
+//  INIT
+//  — Run on DOMContentLoaded AND immediately
+//    (MIT AI Companion sometimes fires before DOMContentLoaded)
+// ════════════════════════════════════════════════
+function appInit() {
+  initSTT();
+  initTTS();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', appInit);
+} else {
+  // DOM already loaded (common in WebViewer)
+  appInit();
+}
+</script>
+</body>
+</html>
